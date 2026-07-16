@@ -16,3 +16,6 @@ installer.iss
 build_installer.bat
 setup.bat
 run.bat
+data/
+backups/
+exports/

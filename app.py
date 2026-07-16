@@ -25,6 +25,9 @@ from services.prn_service import search_prn, search_by_prn
 app = Flask(__name__)
 app.secret_key = os.environ.get("SECRET_KEY", "geeta-pariwar-sadhak-crm-secret-key-change-in-production")
 
+initialize_database()
+seed_admin()
+
 
 def login_required(f):
     @functools.wraps(f)
@@ -686,7 +689,5 @@ def download_backup():
 # ── Start ────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
-    initialize_database()
-    seed_admin()
     port = int(os.environ.get("PORT", 3201))
     app.run(host="0.0.0.0", port=port, debug=True)
