@@ -11,6 +11,7 @@
             {% if user.role == 'Admin' %}
             <button class="btn btn-secondary" id="manageGroupsBtn">Manage Groups</button>
             <a href="{{ url_for('download_backup') }}" class="btn btn-info">Download DB</a>
+            <button class="btn btn-warning" id="uploadDbBtn">Upload DB</button>
             {% endif %}
             <a href="{{ url_for('logout') }}" class="btn btn-danger">Logout</a>
         </div>
@@ -242,27 +243,84 @@
             <h3 id="historyModalTitle">History</h3>
             <button class="modal-close" id="historyModalClose">&times;</button>
         </div>
-        <div class="modal-body">
-            <div class="table-wrapper">
-                <table id="historyTable">
-                    <thead>
-                        <tr>
-                            <th>#</th>
-                            <th>Group</th>
-                            <th>Level</th>
-                            <th>Batch</th>
-                            <th>BC</th>
-                            <th>GC</th>
-                            <th>CT</th>
-                            <th>TA</th>
-                            <th>Changed By</th>
-                            <th>Date</th>
-                        </tr>
-                    </thead>
-                    <tbody id="historyTableBody"></tbody>
-                </table>
-            </div>
+    <div class="modal-body">
+        <div class="table-wrapper">
+            <table id="historyTable">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Group</th>
+                        <th>Level</th>
+                        <th>Batch</th>
+                        <th>BC</th>
+                        <th>GC</th>
+                        <th>CT</th>
+                        <th>TA</th>
+                        <th>Changed By</th>
+                        <th>Date</th>
+                    </tr>
+                </thead>
+                <tbody id="historyTableBody"></tbody>
+            </table>
         </div>
     </div>
 </div>
+
+<div class="modal-overlay" id="uploadDbModal">
+    <div class="modal modal-sm">
+        <div class="modal-header">
+            <h3>Restore Database</h3>
+            <button class="modal-close" id="uploadDbModalClose">&times;</button>
+        </div>
+        <div class="modal-body">
+            <p style="margin-bottom:12px;color:#666">Upload a <code>crm.db</code> backup file. The current database will be backed up as <code>crm.db.bak</code>.</p>
+            <input type="file" id="dbFileInput" accept=".db" style="display:block;margin-bottom:12px">
+            <div id="uploadStatus" class="status-text"></div>
+            <button class="btn btn-primary btn-block" id="uploadDbConfirm">Upload & Restore</button>
+        </div>
+    </div>
+</div>
+
+<script>
+document.getElementById('uploadDbBtn')?.addEventListener('click', () => {
+    document.getElementById('uploadDbModal').style.display = 'flex';
+});
+document.getElementById('uploadDbModalClose')?.addEventListener('click', () => {
+    document.getElementById('uploadDbModal').style.display = 'none';
+});
+document.getElementById('uploadDbConfirm')?.addEventListener('click', async () => {
+    const fileInput = document.getElementById('dbFileInput');
+    const status = document.getElementById('uploadStatus');
+    if (!fileInput.files.length) {
+        status.textContent = 'Please select a .db file.';
+        status.style.color = 'red';
+        return;
+    }
+    const file = fileInput.files[0];
+    if (!file.name.endsWith('.db')) {
+        status.textContent = 'File must be a .db file.';
+        status.style.color = 'red';
+        return;
+    }
+    const formData = new FormData();
+    formData.append('file', file);
+    status.textContent = 'Uploading...';
+    status.style.color = '#666';
+    try {
+        const res = await fetch('/api/backup/upload', { method: 'POST', body: formData });
+        const data = await res.json();
+        if (data.success) {
+            status.textContent = 'Database restored! Reloading...';
+            status.style.color = 'green';
+            setTimeout(() => location.reload(), 1500);
+        } else {
+            status.textContent = 'Error: ' + (data.error || 'Unknown error');
+            status.style.color = 'red';
+        }
+    } catch (err) {
+        status.textContent = 'Network error: ' + err.message;
+        status.style.color = 'red';
+    }
+});
+</script>
 {% endblock %}

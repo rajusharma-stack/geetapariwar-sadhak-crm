@@ -3,6 +3,7 @@ import json
 import hashlib
 import logging
 import os
+import sqlite3
 from pathlib import Path
 from typing import Optional
 
@@ -685,6 +686,44 @@ def download_backup():
         abort(403)
     from config import DATABASE_PATH
     return send_file(str(DATABASE_PATH), as_attachment=True, download_name="crm.db")
+
+
+@app.route("/api/backup/upload", methods=["POST"])
+@login_required
+def upload_backup():
+    user = _session_user()
+    if user["role"] != "Admin":
+        return jsonify({"error": "Only Admin can restore database."}), 403
+    if "file" not in request.files:
+        return jsonify({"error": "No file provided."}), 400
+    file = request.files["file"]
+    if file.filename == "":
+        return jsonify({"error": "No file selected."}), 400
+    if not file.filename.endswith(".db"):
+        return jsonify({"error": "File must be a .db file."}), 400
+
+    from config import DATABASE_PATH
+    import shutil, tempfile
+
+    tmp = Path(tempfile.mktemp(suffix=".db"))
+    try:
+        file.save(str(tmp))
+        with sqlite3.connect(str(tmp)) as check:
+            check.execute("SELECT COUNT(*) FROM sqlite_master")
+    except Exception:
+        tmp.unlink(missing_ok=True)
+        return jsonify({"error": "Uploaded file is not a valid SQLite database."}), 400
+
+    try:
+        if DATABASE_PATH.exists():
+            bak = DATABASE_PATH.with_suffix(".db.bak")
+            shutil.copy2(str(DATABASE_PATH), str(bak))
+        shutil.move(str(tmp), str(DATABASE_PATH))
+        initialize_database()
+    except Exception as exc:
+        return jsonify({"error": f"Failed to restore database: {exc}"}), 500
+
+    return jsonify({"success": True, "message": "Database restored successfully."})
 
 
 @app.route("/api/db-info")
