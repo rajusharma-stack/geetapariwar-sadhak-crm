@@ -1,0 +1,33 @@
+<form name="myform" id="myform" method="post"   action="searchparticipant.php">
+                  <div class="row">
+ <div class="col-sm-11 participant-header  mx-auto text-center ">
+     <marquee> <h5 class="display-5"  style="color:tomato;">कृपया अंग्रेजी वर्णमाला में ही लिखें.
+Please Type in English only</h5></marquee>
+     
+    </div>
+                     <div class="col-sm-12">
+                      <!-- text input -->
+                      
+                      <div class="form-group">
+                        <label>Mobile Number OR  Email address  / ईमेल ID  *</label>
+                        <input type="text" class="form-control" name="email" id=="email" value="" placeholder="Enter Mobile Number Or Email ID for Search" required style="width: 100%;" required>
+                      
+                     <!-- phone mask -->
+                  
+
+                      <div class="card-footer">
+                  <button type="submit" name="Submit" class="btn btn-warning">Search	</button>
+                 
+                </div>
+                <div class="form-group">
+
+<br>अन्य किसी सहायता हेतु निम्न नम्बर पर संपर्क कर सकते हैं।  You may contact at numbers below for any assistance.
+<br>
+<b>Tele Helpline: 1800 203 6500, +91 8586822506, 8587868498 (10am to 6pm IST)
+<br>Email us: helplinegeeta@gmail.com</b>
+<br>
+</div>
+                
+                  </div>
+                  
+                  </form>

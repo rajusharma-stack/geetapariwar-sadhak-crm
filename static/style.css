@@ -1,0 +1,460 @@
+*, *::before, *::after {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+:root {
+    --bg: #1a1d23;
+    --surface: #23272e;
+    --surface2: #2c3038;
+    --border: #3a3f48;
+    --text: #e1e4e8;
+    --text-muted: #8b949e;
+    --primary: #58a6ff;
+    --success: #3fb950;
+    --danger: #f85149;
+    --info: #79c0ff;
+    --warning: #d29922;
+    --secondary: #6e7681;
+    --radius: 8px;
+    --shadow: 0 2px 8px rgba(0,0,0,0.3);
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    line-height: 1.5;
+    min-height: 100vh;
+}
+
+a { color: var(--primary); text-decoration: none; }
+a:hover { text-decoration: underline; }
+
+/* ── Login ─────────────────────────────────────────────────────── */
+
+.login-page {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 100vh;
+    padding: 20px;
+}
+
+.login-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 40px 32px;
+    width: 100%;
+    max-width: 380px;
+    box-shadow: var(--shadow);
+}
+
+.login-header {
+    text-align: center;
+    margin-bottom: 32px;
+}
+
+.login-header h1 {
+    font-size: 1.5rem;
+    margin-bottom: 4px;
+    color: #fff;
+}
+
+.login-header p {
+    color: var(--text-muted);
+    font-size: 0.95rem;
+}
+
+/* ── Forms ─────────────────────────────────────────────────────── */
+
+.form-group {
+    margin-bottom: 16px;
+}
+
+.form-group label {
+    display: block;
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin-bottom: 4px;
+    font-weight: 500;
+}
+
+input, select, textarea {
+    width: 100%;
+    padding: 10px 12px;
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    color: var(--text);
+    font-size: 0.9rem;
+    transition: border-color 0.2s;
+}
+
+input:focus, select:focus {
+    outline: none;
+    border-color: var(--primary);
+    box-shadow: 0 0 0 2px rgba(88,166,255,0.2);
+}
+
+select {
+    cursor: pointer;
+    appearance: auto;
+}
+
+.readonly-input {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+.phone-row {
+    display: flex;
+    gap: 8px;
+}
+
+.phone-row select {
+    width: 180px;
+    flex-shrink: 0;
+}
+
+.phone-row input {
+    flex: 1;
+}
+
+/* ── Buttons ───────────────────────────────────────────────────── */
+
+.btn {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    padding: 8px 16px;
+    border: 1px solid transparent;
+    border-radius: var(--radius);
+    font-size: 0.85rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: opacity 0.2s, transform 0.1s;
+    white-space: nowrap;
+}
+
+.btn:active { transform: scale(0.97); }
+.btn:hover { opacity: 0.9; }
+
+.btn-primary { background: var(--primary); color: #000; }
+.btn-success { background: var(--success); color: #000; }
+.btn-danger { background: var(--danger); color: #fff; }
+.btn-info { background: var(--info); color: #000; }
+.btn-secondary { background: var(--secondary); color: #fff; }
+.btn-block { width: 100%; }
+.btn-sm { padding: 5px 10px; font-size: 0.8rem; }
+.btn-row { display: flex; gap: 8px; margin-top: 12px; flex-wrap: wrap; }
+
+.badge {
+    display: inline-block;
+    padding: 3px 10px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 600;
+    background: var(--primary);
+    color: #000;
+}
+
+/* ── Alert ─────────────────────────────────────────────────────── */
+
+.alert {
+    padding: 10px 14px;
+    border-radius: var(--radius);
+    font-size: 0.85rem;
+    margin-bottom: 16px;
+}
+
+.alert-error {
+    background: rgba(248,81,73,0.15);
+    border: 1px solid var(--danger);
+    color: var(--danger);
+}
+
+/* ── App Layout ────────────────────────────────────────────────── */
+
+.app-container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 0 16px;
+}
+
+.top-bar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 12px 0;
+    border-bottom: 1px solid var(--border);
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.top-bar h2 {
+    font-size: 1.1rem;
+    color: #fff;
+}
+
+.top-bar-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.main-content {
+    display: grid;
+    grid-template-columns: 1fr 2fr;
+    gap: 16px;
+    padding: 16px 0;
+}
+
+@media (max-width: 900px) {
+    .main-content {
+        grid-template-columns: 1fr;
+    }
+}
+
+/* ── Panels ────────────────────────────────────────────────────── */
+
+.panel {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 20px;
+    min-width: 0;
+}
+
+.panel-title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin-bottom: 16px;
+    color: #fff;
+}
+
+/* ── Registration extra ────────────────────────────────────────── */
+
+#roleHolderDisplay {
+    background: var(--surface2);
+    border-radius: var(--radius);
+    padding: 10px 14px;
+    margin: 12px 0;
+    font-size: 0.85rem;
+}
+
+#roleHolderDisplay p {
+    margin: 2px 0;
+}
+
+.status-text {
+    font-size: 0.85rem;
+    color: var(--text-muted);
+    margin: 8px 0;
+}
+
+/* ── Filters ───────────────────────────────────────────────────── */
+
+.filter-bar {
+    display: flex;
+    gap: 8px;
+    margin-bottom: 12px;
+    flex-wrap: wrap;
+}
+
+.filter-bar input {
+    flex: 1;
+    min-width: 160px;
+}
+
+.filter-bar select {
+    width: 180px;
+}
+
+/* ── Toolbar ───────────────────────────────────────────────────── */
+
+.toolbar {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    margin-bottom: 8px;
+    gap: 8px;
+    flex-wrap: wrap;
+}
+
+.toolbar-actions {
+    display: flex;
+    gap: 6px;
+    flex-wrap: wrap;
+}
+
+/* ── Table ─────────────────────────────────────────────────────── */
+
+.table-wrapper {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.82rem;
+}
+
+thead {
+    background: var(--surface2);
+}
+
+th {
+    text-align: left;
+    padding: 8px 10px;
+    font-weight: 600;
+    color: var(--text-muted);
+    border-bottom: 2px solid var(--border);
+    white-space: nowrap;
+    cursor: pointer;
+}
+
+td {
+    padding: 8px 10px;
+    border-bottom: 1px solid var(--border);
+    white-space: nowrap;
+}
+
+tbody tr {
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+tbody tr:hover {
+    background: var(--surface2);
+}
+
+tbody tr.selected {
+    background: rgba(88,166,255,0.12);
+    outline: 1px solid var(--primary);
+}
+
+/* ── Modals ────────────────────────────────────────────────────── */
+
+.modal-overlay {
+    display: none;
+    position: fixed;
+    top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.7);
+    z-index: 1000;
+    overflow-y: auto;
+    padding: 20px;
+}
+
+.modal-overlay.active {
+    display: flex;
+    align-items: flex-start;
+    justify-content: center;
+    padding-top: 60px;
+}
+
+.modal {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    width: 100%;
+    max-width: 850px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    margin-bottom: 40px;
+}
+
+.modal-sm {
+    max-width: 480px;
+}
+
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 16px 20px;
+    border-bottom: 1px solid var(--border);
+}
+
+.modal-header h3 {
+    font-size: 1rem;
+    color: #fff;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    color: var(--text-muted);
+    font-size: 1.5rem;
+    cursor: pointer;
+    padding: 0 4px;
+    line-height: 1;
+}
+
+.modal-close:hover {
+    color: var(--text);
+}
+
+.modal-body {
+    padding: 20px;
+}
+
+/* ── Responsive ────────────────────────────────────────────────── */
+
+@media (max-width: 600px) {
+    .login-card {
+        padding: 24px 20px;
+    }
+
+    .top-bar {
+        flex-direction: column;
+        align-items: stretch;
+        text-align: center;
+    }
+
+    .top-bar-right {
+        justify-content: center;
+    }
+
+    .panel {
+        padding: 14px;
+    }
+
+    .filter-bar {
+        flex-direction: column;
+    }
+
+    .filter-bar input,
+    .filter-bar select {
+        width: 100%;
+        min-width: unset;
+    }
+
+    .toolbar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .toolbar-actions {
+        justify-content: center;
+    }
+
+    .phone-row {
+        flex-direction: column;
+    }
+
+    .phone-row select {
+        width: 100%;
+    }
+
+    .modal-overlay {
+        padding: 10px;
+    }
+
+    .modal-overlay.active {
+        padding-top: 20px;
+    }
+}
