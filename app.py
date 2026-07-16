@@ -686,6 +686,37 @@ def download_backup():
     from config import DATABASE_PATH
     return send_file(str(DATABASE_PATH), as_attachment=True, download_name="crm.db")
 
+
+@app.route("/api/db-info")
+@login_required
+def db_info():
+    user = _session_user()
+    if user["role"] != "Admin":
+        abort(403)
+    from config import DATA_DIR
+    import os
+    info = {
+        "database_path": str(DATABASE_PATH),
+        "data_dir": str(DATA_DIR),
+        "file_exists": DATABASE_PATH.exists(),
+        "file_size_bytes": DATABASE_PATH.stat().st_size if DATABASE_PATH.exists() else 0,
+        "geetapariwar_data_dir_env": os.environ.get("GEETAPARIWAR_DATA_DIR", "not set"),
+    }
+    if DATABASE_PATH.exists():
+        try:
+            conn = get_connection()
+            tables = conn.execute(
+                "SELECT name FROM sqlite_master WHERE type='table' ORDER BY name"
+            ).fetchall()
+            info["tables"] = []
+            for t in tables:
+                count = conn.execute(f"SELECT COUNT(*) FROM {t[0]}").fetchone()[0]
+                info["tables"].append({"name": t[0], "rows": count})
+            conn.close()
+        except Exception as e:
+            info["error"] = str(e)
+    return jsonify(info)
+
 # ── Start ────────────────────────────────────────────────────────────
 
 if __name__ == "__main__":
