@@ -115,6 +115,10 @@
         if (groupId) params.set('group_id', groupId);
         try {
             const res = await fetch('/api/sadhaks?' + params.toString());
+            if (!res.ok) {
+                const errData = await res.json().catch(() => ({}));
+                throw new Error(errData.error || 'Failed to load sadhaks (status ' + res.status + ')');
+            }
             const data = await res.json();
             sadhakTbody.innerHTML = '';
             data.records.forEach(r => {
@@ -146,6 +150,7 @@
             totalLabel.textContent = search || groupId ? `(${showing} of ${total})` : `(${total})`;
         } catch (err) {
             console.error(err);
+            sadhakTbody.innerHTML = '<tr><td colspan="15" style="text-align:center;color:var(--danger);padding:40px">Error loading data: ' + esc(err.message) + '</td></tr>';
         }
     }
 
@@ -742,6 +747,7 @@
             if (!res.ok) { alertError(data.error); return; }
             await loadGroups();
             await reloadGroupDropdowns();
+            await loadSadhaks();
         } catch (err) {
             alertError('Failed to delete.');
         }
@@ -789,6 +795,7 @@
             groupEditModal.classList.remove('active');
             await loadGroups();
             await reloadGroupDropdowns();
+            await loadSadhaks();
         } catch (err) {
             alertError('Failed to save group.');
         }

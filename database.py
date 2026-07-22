@@ -3,8 +3,6 @@ import sqlite3
 import tempfile
 from config import DATABASE_PATH
 
-_WAL_ENABLED = False
-
 
 def get_connection() -> sqlite3.Connection:
     DATABASE_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -15,13 +13,10 @@ def get_connection() -> sqlite3.Connection:
     )
     conn.execute("PRAGMA foreign_keys=ON")
     conn.execute("PRAGMA busy_timeout=30000")
-    global _WAL_ENABLED
-    if not _WAL_ENABLED:
-        try:
-            conn.execute("PRAGMA journal_mode=WAL")
-            _WAL_ENABLED = True
-        except sqlite3.OperationalError:
-            pass
+    try:
+        conn.execute("PRAGMA journal_mode=WAL")
+    except sqlite3.OperationalError:
+        pass
     return conn
 
 

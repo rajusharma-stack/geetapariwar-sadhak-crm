@@ -65,10 +65,10 @@
                 </div>
 
                 <div id="roleHolderDisplay">
-                    <p><strong>BC:</strong> <span id="bcDisplay">—</span></p>
-                    <p><strong>GC:</strong> <span id="gcDisplay">—</span></p>
-                    <p><strong>CT:</strong> <span id="ctDisplay">—</span></p>
-                    <p><strong>TA:</strong> <span id="taDisplay">—</span></p>
+                    <p><strong>BC:</strong> <span id="bcDisplay">ΓÇö</span></p>
+                    <p><strong>GC:</strong> <span id="gcDisplay">ΓÇö</span></p>
+                    <p><strong>CT:</strong> <span id="ctDisplay">ΓÇö</span></p>
+                    <p><strong>TA:</strong> <span id="taDisplay">ΓÇö</span></p>
                 </div>
 
                 <div id="zoomLinkRow" style="display:none">
@@ -243,25 +243,26 @@
             <h3 id="historyModalTitle">History</h3>
             <button class="modal-close" id="historyModalClose">&times;</button>
         </div>
-    <div class="modal-body">
-        <div class="table-wrapper">
-            <table id="historyTable">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Group</th>
-                        <th>Level</th>
-                        <th>Batch</th>
-                        <th>BC</th>
-                        <th>GC</th>
-                        <th>CT</th>
-                        <th>TA</th>
-                        <th>Changed By</th>
-                        <th>Date</th>
-                    </tr>
-                </thead>
-                <tbody id="historyTableBody"></tbody>
-            </table>
+        <div class="modal-body">
+            <div class="table-wrapper">
+                <table id="historyTable">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Group</th>
+                            <th>Level</th>
+                            <th>Batch</th>
+                            <th>BC</th>
+                            <th>GC</th>
+                            <th>CT</th>
+                            <th>TA</th>
+                            <th>Changed By</th>
+                            <th>Date</th>
+                        </tr>
+                    </thead>
+                    <tbody id="historyTableBody"></tbody>
+                </table>
+            </div>
         </div>
     </div>
 </div>
@@ -282,45 +283,51 @@
 </div>
 
 <script>
-document.getElementById('uploadDbBtn')?.addEventListener('click', () => {
-    document.getElementById('uploadDbModal').style.display = 'flex';
-});
-document.getElementById('uploadDbModalClose')?.addEventListener('click', () => {
-    document.getElementById('uploadDbModal').style.display = 'none';
-});
-document.getElementById('uploadDbConfirm')?.addEventListener('click', async () => {
-    const fileInput = document.getElementById('dbFileInput');
-    const status = document.getElementById('uploadStatus');
-    if (!fileInput.files.length) {
-        status.textContent = 'Please select a .db file.';
-        status.style.color = 'red';
-        return;
+(function() {
+    var btn = document.getElementById('uploadDbBtn');
+    var modal = document.getElementById('uploadDbModal');
+    if (!btn || !modal) return;
+    btn.addEventListener('click', function() { modal.classList.add('active'); });
+    var closeBtn = document.getElementById('uploadDbModalClose');
+    if (closeBtn) {
+        closeBtn.addEventListener('click', function() { modal.classList.remove('active'); });
     }
-    const file = fileInput.files[0];
-    if (!file.name.endsWith('.db')) {
-        status.textContent = 'File must be a .db file.';
-        status.style.color = 'red';
-        return;
-    }
-    const formData = new FormData();
-    formData.append('file', file);
-    status.textContent = 'Uploading...';
-    status.style.color = '#666';
-    try {
-        const res = await fetch('/api/backup/upload', { method: 'POST', body: formData });
-        const data = await res.json();
-        if (data.success) {
-            status.textContent = 'Database restored! Reloading...';
-            status.style.color = 'green';
-            setTimeout(() => location.reload(), 1500);
-        } else {
-            status.textContent = 'Error: ' + (data.error || 'Unknown error');
+    var confirmBtn = document.getElementById('uploadDbConfirm');
+    var fileInput = document.getElementById('dbFileInput');
+    var status = document.getElementById('uploadStatus');
+    if (!confirmBtn || !fileInput || !status) return;
+    confirmBtn.addEventListener('click', async function() {
+        if (!fileInput.files.length) {
+            status.textContent = 'Please select a .db file.';
+            status.style.color = 'red';
+            return;
+        }
+        var file = fileInput.files[0];
+        if (!file.name.endsWith('.db')) {
+            status.textContent = 'File must be a .db file.';
+            status.style.color = 'red';
+            return;
+        }
+        var formData = new FormData();
+        formData.append('file', file);
+        status.textContent = 'Uploading...';
+        status.style.color = '#666';
+        try {
+            var res = await fetch('/api/backup/upload', { method: 'POST', body: formData });
+            var data = await res.json();
+            if (data.success) {
+                status.textContent = 'Database restored! Reloading...';
+                status.style.color = 'green';
+                setTimeout(function() { location.reload(); }, 1500);
+            } else {
+                status.textContent = 'Error: ' + (data.error || 'Unknown error');
+                status.style.color = 'red';
+            }
+        } catch (err) {
+            status.textContent = 'Network error: ' + err.message;
             status.style.color = 'red';
         }
-    } catch (err) {
-        status.textContent = 'Network error: ' + err.message;
-        status.style.color = 'red';
-    }
-});
+    });
+})();
 </script>
 {% endblock %}

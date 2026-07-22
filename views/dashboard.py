@@ -13,6 +13,8 @@ from ttkbootstrap.constants import *
 from tkinter import messagebox, Toplevel
 from pathlib import Path
 
+import sqlite3
+
 from database import get_connection
 from services.backup_service import backup_to_drive
 from services.prn_service import search_prn, search_by_prn, _select_best_prn_result
@@ -692,31 +694,44 @@ class SadhakRegistrationFrame(ttk.Frame):
             messagebox.showwarning("Validation", "Name and Mobile Number are required.")
             return
 
-        # Prepend country code if not already present
         if not phone.startswith("+"):
             phone = self.country_code_var.get().split()[0] + phone
 
-        if self._editing_id is not None and not can_edit_sadhak(self._user.id, self._editing_id):
-            messagebox.showerror(
-                "Access Denied",
-                "You can only edit sadhaks in groups where you are\n"
-                "assigned as BC, GC, CT, or TA.",
-            )
-            return
-
-        # Snapshot role-holder names from the selected group
-        bc_name = gc_name = ct_name = ta_name = None
-        if group_id:
-            info = get_group_with_names(group_id)
-            if info:
-                bc_name = info.bc_name
-                gc_name = info.gc_name
-                ct_name = info.ct_name
-                ta_name = info.ta_name
-
+        conn = get_connection()
         try:
-            conn = get_connection()
+            digits_only = phone.lstrip("+")
+            existing = conn.execute(
+                "SELECT id, name FROM sadhak WHERE phone=? OR phone=?", (phone, digits_only)
+            ).fetchone()
+            if existing:
+                if self._editing_id is not None and existing[0] == self._editing_id:
+                    pass
+                else:
+                    messagebox.showwarning(
+                        "Duplicate Phone",
+                        f"Phone number already registered to '{existing[1]}'.",
+                    )
+                    return
+
+            if self._editing_id is not None and not can_edit_sadhak(self._user.id, self._editing_id):
+                messagebox.showerror(
+                    "Access Denied",
+                    "You can only edit sadhaks in groups where you are\n"
+                    "assigned as BC, GC, CT, or TA.",
+                )
+                return
+
+            bc_name = gc_name = ct_name = ta_name = None
+            if group_id:
+                info = get_group_with_names(group_id)
+                if info:
+                    bc_name = info.bc_name
+                    gc_name = info.gc_name
+                    ct_name = info.ct_name
+                    ta_name = info.ta_name
+
             group_name = self.group_var.get() or None
+            msg = ""
             if self._editing_id is not None:
                 conn.execute(
                     """UPDATE sadhak
@@ -751,12 +766,16 @@ class SadhakRegistrationFrame(ttk.Frame):
             )
 
             conn.commit()
-            conn.close()
-            backup_to_drive()
+        except sqlite3.IntegrityError:
+            messagebox.showwarning("Duplicate Phone", "Phone number already registered.")
+            return
         except Exception as exc:
             messagebox.showerror("Database Error", str(exc))
             return
+        finally:
+            conn.close()
 
+        backup_to_drive()
         self.status_var.set(msg)
         self._clear_form()
         app = self.master
@@ -957,15 +976,16 @@ class SadhakListFrame(ttk.Frame):
         ok = messagebox.askyesno("Confirm Delete", f"Delete Sadhak '{name}' (ID {sid})?")
         if not ok:
             return
+        conn = get_connection()
         try:
-            conn = get_connection()
             conn.execute("DELETE FROM sadhak WHERE id=?", (sid,))
             conn.commit()
-            conn.close()
-            backup_to_drive()
         except Exception as exc:
             messagebox.showerror("Database Error", str(exc))
             return
+        finally:
+            conn.close()
+        backup_to_drive()
         self._load_sadhaks()
 
     def _show_history(self) -> None:
@@ -1041,13 +1061,14 @@ class SadhakListFrame(ttk.Frame):
         webbrowser.open(f"https://wa.me/{clean}")
 
     def _get_total_count(self) -> int:
+        conn = get_connection()
         try:
-            conn = get_connection()
             row = conn.execute("SELECT COUNT(*) FROM sadhak").fetchone()
-            conn.close()
             return row[0] if row else 0
         except Exception:
             return 0
+        finally:
+            conn.close()
 
     def _load_sadhaks(self) -> None:
         for row in self.tree.get_children():
@@ -1119,7 +1140,7 @@ class DashboardFrame(ttk.Frame):
         self.user = user
         self._on_logout = on_logout
 
-        # Header
+        # Header – exactly like the web top-bar
         header = ttk.Frame(self, padding=(20, 12, 20, 8))
         header.pack(fill=X)
 
@@ -1129,27 +1150,46 @@ class DashboardFrame(ttk.Frame):
             font=("Segoe UI", 14, "bold"),
         ).pack(side=LEFT)
 
+        header_right = ttk.Frame(header)
+        header_right.pack(side=RIGHT)
+
+        self.logout_btn = ttk.Button(
+            header_right, text="Logout", command=self._do_logout, bootstyle=DANGER
+        )
+        self.logout_btn.pack(side=RIGHT)
+
         if self.user.role == "Admin":
-            self.mgmt_btn = ttk.Button(
-                header,
-                text="Manage Groups",
-                command=self._open_group_manager,
-                bootstyle=SECONDARY,
+            self.upload_btn = ttk.Button(
+                header_right,
+                text="Upload DB",
+                command=self._upload_db,
+                bootstyle=WARNING,
             )
-            self.mgmt_btn.pack(side=RIGHT, padx=(8, 0))
+            self.upload_btn.pack(side=RIGHT, padx=(6, 0))
+
+            self.download_btn = ttk.Button(
+                header_right,
+                text="Download DB",
+                command=self._download_db,
+                bootstyle=INFO,
+            )
+            self.download_btn.pack(side=RIGHT, padx=(6, 0))
 
             self.sync_btn = ttk.Button(
-                header,
+                header_right,
                 text="Sync from Web",
                 command=self._sync_from_web,
                 bootstyle=INFO,
             )
-            self.sync_btn.pack(side=RIGHT, padx=(8, 0))
+            self.sync_btn.pack(side=RIGHT, padx=(6, 0))
 
-        self.logout_btn = ttk.Button(
-            header, text="Logout", command=self._do_logout, bootstyle=DANGER
-        )
-        self.logout_btn.pack(side=RIGHT)
+            self.mgmt_btn = ttk.Button(
+                header_right,
+                text="Manage Groups",
+                command=self._open_group_manager,
+                bootstyle=SECONDARY,
+            )
+            self.mgmt_btn.pack(side=RIGHT, padx=(0, 6))
 
         role_label = ttk.Label(
             header,
@@ -1248,6 +1288,7 @@ class DashboardFrame(ttk.Frame):
             GroupDialog(win, group_id=gid)
             load()
             self.reg_frame._reload_groups()
+            self.refresh_sadhak_list()
 
         def delete():
             if self.user.role != "Admin":
@@ -1264,6 +1305,7 @@ class DashboardFrame(ttk.Frame):
             delete_group(gid)
             load()
             self.reg_frame._reload_groups()
+            self.refresh_sadhak_list()
 
         def open_zoom():
             sel = tree.selection()
@@ -1291,6 +1333,62 @@ class DashboardFrame(ttk.Frame):
         ttk.Button(btn_row, text="Close", command=win.destroy, bootstyle=SECONDARY).pack(
             side=RIGHT
         )
+
+    def _download_db(self) -> None:
+        from tkinter.filedialog import asksaveasfilename
+        import shutil
+        from config import DATABASE_PATH
+        dest = asksaveasfilename(
+            defaultextension=".db",
+            filetypes=[("SQLite Database", "*.db;*.sqlite"), ("All files", "*.*")],
+            initialfile="crm.db",
+        )
+        if not dest:
+            return
+        try:
+            shutil.copy2(str(DATABASE_PATH), dest)
+            messagebox.showinfo("Success", f"Database saved to:\n{dest}")
+        except Exception as exc:
+            messagebox.showerror("Error", f"Failed to save database:\n{exc}")
+
+    def _upload_db(self) -> None:
+        from tkinter.filedialog import askopenfilename
+        import shutil
+        from config import DATABASE_PATH
+        from database import get_connection, initialize_database
+        src = askopenfilename(
+            filetypes=[("SQLite Database", "*.db;*.sqlite"), ("All files", "*.*")]
+        )
+        if not src:
+            return
+        try:
+            with sqlite3.connect(src) as check:
+                check.execute("SELECT COUNT(*) FROM sqlite_master")
+        except Exception:
+            messagebox.showerror("Invalid File", "Selected file is not a valid SQLite database.")
+            return
+        ok = messagebox.askyesno(
+            "Confirm Restore",
+            "This will replace the current database with the selected file.\n"
+            "A backup of the current database will be created.\n\nContinue?",
+        )
+        if not ok:
+            return
+        try:
+            if DATABASE_PATH.exists():
+                bak = DATABASE_PATH.with_suffix(".db.bak")
+                shutil.copy2(str(DATABASE_PATH), str(bak))
+            src_conn = sqlite3.connect(str(src))
+            dst_conn = get_connection()
+            src_conn.backup(dst_conn, pages=-1)
+            src_conn.close()
+            dst_conn.close()
+            initialize_database()
+            messagebox.showinfo("Success", "Database restored successfully.")
+            self.refresh_sadhak_list()
+            self.reg_frame._reload_groups()
+        except Exception as exc:
+            messagebox.showerror("Error", f"Failed to restore database:\n{exc}")
 
     def _sync_from_web(self) -> None:
         from tkinter.simpledialog import askstring

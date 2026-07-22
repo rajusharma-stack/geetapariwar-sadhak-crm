@@ -27,6 +27,14 @@
 - **Symptom**: Remote search returned empty results even when LearnGeeta had data
 - **Fix**: The table's first column uses `<th>` (not `<td>`), so `handle_data` was only checking `self._current_tag == "td"`. Changed to `self._current_tag in ("td", "th")` to also capture `<th>` cell values.
 
+## Serving as web server (for others to access)
+```powershell
+.\serve_web.bat
+```
+This starts ngrok + waitress (production WSGI). It prints a public URL you can share with anyone.
+- Requires ngrok (already installed)
+- Others just open the link in their browser, log in with their credentials, and use the CRM
+
 ## Running the app
 ```powershell
 .venv\Scripts\python.exe main.py

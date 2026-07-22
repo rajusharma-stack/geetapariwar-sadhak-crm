@@ -47,7 +47,7 @@ def _acquire_instance_lock() -> bool:
 
 class App(ttk.Window):
     def __init__(self) -> None:
-        super().__init__(themename="superhero")
+        super().__init__(themename="darkly")
         self.title("Geeta Pariwar Nepal Sadhak CRM")
         self.geometry("1024x680")
         self.minsize(800, 520)
@@ -79,12 +79,18 @@ class App(ttk.Window):
 
     def show_dashboard(self, user) -> None:
         self._clear()
-        self._current_frame = DashboardFrame(
-            self, user=user, on_logout=self.show_login
-        )
-        self.title(
-            f"Geeta Pariwar Nepal Sadhak CRM – Logged in as {user.full_name}"
-        )
+        try:
+            self._current_frame = DashboardFrame(
+                self, user=user, on_logout=self.show_login
+            )
+            self.title(
+                f"Geeta Pariwar Nepal Sadhak CRM – Logged in as {user.full_name}"
+            )
+        except Exception as exc:
+            log.exception("Failed to create dashboard")
+            import tkinter.messagebox as mb
+            mb.showerror("Dashboard Error", f"Failed to load dashboard:\n{exc}")
+            self.show_login()
 
 
 def main() -> None:

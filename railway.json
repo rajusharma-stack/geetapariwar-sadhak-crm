@@ -7,6 +7,18 @@
   "deploy": {
     "numReplicas": 1,
     "restartPolicyType": "ALWAYS",
-    "restartPolicyMaxRetries": 10
-  }
+    "restartPolicyMaxRetries": 10,
+    "volumeMounts": [
+      {
+        "name": "geetapariwar_data",
+        "mountPath": "/data"
+      }
+    ]
+  },
+  "volumes": [
+    {
+      "name": "geetapariwar_data",
+      "size": 10
+    }
+  ]
 }

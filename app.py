@@ -1,14 +1,63 @@
+import atexit
 import functools
 import json
 import hashlib
 import logging
 import os
+import secrets
 import sqlite3
+import tempfile
 from pathlib import Path
 from typing import Optional
 
 logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger(__name__)
+
+_WEB_LOCK_FILE = os.path.join(tempfile.gettempdir(), "geetapariwar_web.lock")
+
+
+def _acquire_web_lock() -> bool:
+    try:
+        fd = os.open(_WEB_LOCK_FILE, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+        os.write(fd, str(os.getpid()).encode())
+        os.close(fd)
+        return True
+    except FileExistsError:
+        try:
+            with open(_WEB_LOCK_FILE) as f:
+                old_pid = int(f.read().strip())
+            try:
+                os.kill(old_pid, 0)
+                return False
+            except OSError:
+                pass
+            os.unlink(_WEB_LOCK_FILE)
+            fd = os.open(_WEB_LOCK_FILE, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
+            os.write(fd, str(os.getpid()).encode())
+            os.close(fd)
+            return True
+        except Exception:
+            return False
+
+
+if not _acquire_web_lock():
+    log.error("Another web server instance is already running")
+    import sys
+    sys.exit(1)
+
+
+def _cleanup_web_lock() -> None:
+    try:
+        if os.path.exists(_WEB_LOCK_FILE):
+            with open(_WEB_LOCK_FILE) as f:
+                pid = int(f.read().strip())
+            if pid == os.getpid():
+                os.unlink(_WEB_LOCK_FILE)
+    except Exception:
+        pass
+
+
+atexit.register(_cleanup_web_lock)
 
 from flask import (
     Flask, render_template, request, redirect,
@@ -23,8 +72,21 @@ from services.group_service import (
 )
 from services.prn_service import search_prn, search_by_prn
 
+
+def _get_secret_key() -> str:
+    env_key = os.environ.get("SECRET_KEY")
+    if env_key:
+        return env_key
+    key_file = Path(__file__).resolve().parent / ".secret_key"
+    if key_file.exists():
+        return key_file.read_text().strip()
+    key = secrets.token_hex(32)
+    key_file.write_text(key)
+    return key
+
+
 app = Flask(__name__)
-app.secret_key = os.environ.get("SECRET_KEY", "geeta-pariwar-sadhak-crm-secret-key-change-in-production")
+app.secret_key = _get_secret_key()
 
 initialize_database()
 seed_admin()
@@ -471,21 +533,33 @@ def save_sadhak():
         return jsonify({"error": "Name and Mobile Number are required."}), 400
     if not phone.startswith("+"):
         phone = (data.get("country_code", DEFAULT_COUNTRY_CODE)) + phone
-    if editing_id:
-        if not can_edit_sadhak(user["id"], editing_id):
-            return jsonify({"error": "Access denied. You can only edit sadhaks in your groups."}), 403
-    bc_name = gc_name = ct_name = ta_name = None
-    group_name = None
-    if group_id:
-        info = get_group_with_names(group_id)
-        if info:
-            bc_name = info.bc_name
-            gc_name = info.gc_name
-            ct_name = info.ct_name
-            ta_name = info.ta_name
-            group_name = info.name
+
+    conn = get_connection()
     try:
-        conn = get_connection()
+        digits_only = phone.lstrip("+")
+        existing = conn.execute(
+            "SELECT id, name FROM sadhak WHERE phone=? OR phone=?",
+            (phone, digits_only),
+        ).fetchone()
+        if existing:
+            if editing_id and existing[0] == editing_id:
+                pass
+            else:
+                return jsonify({"error": f"Phone number already registered to '{existing[1]}'."}), 409
+
+        if editing_id:
+            if not can_edit_sadhak(user["id"], editing_id):
+                return jsonify({"error": "Access denied. You can only edit sadhaks in your groups."}), 403
+        bc_name = gc_name = ct_name = ta_name = None
+        group_name = None
+        if group_id:
+            info = get_group_with_names(group_id)
+            if info:
+                bc_name = info.bc_name
+                gc_name = info.gc_name
+                ct_name = info.ct_name
+                ta_name = info.ta_name
+                group_name = info.name
         if editing_id:
             conn.execute(
                 """UPDATE sadhak SET name=?, phone=?, email=?, prn=?, group_id=?,
@@ -515,11 +589,13 @@ def save_sadhak():
              bc_name, gc_name, ct_name, ta_name, user["id"]),
         )
         conn.commit()
-        conn.close()
-        backup_to_drive()
-        return jsonify({"success": True, "id": sadhak_id, "message": f"Saved: {name}"})
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
+    finally:
+        conn.close()
+
+    backup_to_drive()
+    return jsonify({"success": True, "id": sadhak_id, "message": f"Saved: {name}"})
 
 
 @app.route("/api/sadhak/<int:sadhak_id>", methods=["DELETE"])
@@ -528,15 +604,18 @@ def delete_sadhak(sadhak_id):
     user = _session_user()
     if user["role"] != "Admin":
         return jsonify({"error": "Only Admin can delete records."}), 403
+    conn = get_connection()
     try:
-        conn = get_connection()
         conn.execute("DELETE FROM sadhak WHERE id=?", (sadhak_id,))
         conn.commit()
-        conn.close()
-        backup_to_drive()
-        return jsonify({"success": True})
+    except sqlite3.IntegrityError:
+        return jsonify({"error": "Phone number already registered."}), 409
     except Exception as exc:
         return jsonify({"error": str(exc)}), 500
+    finally:
+        conn.close()
+    backup_to_drive()
+    return jsonify({"success": True})
 
 
 @app.route("/api/sadhak/<int:sadhak_id>/history")
@@ -718,9 +797,16 @@ def upload_backup():
         if DATABASE_PATH.exists():
             bak = DATABASE_PATH.with_suffix(".db.bak")
             shutil.copy2(str(DATABASE_PATH), str(bak))
-        shutil.move(str(tmp), str(DATABASE_PATH))
+
+        src_conn = sqlite3.connect(str(tmp))
+        dst_conn = get_connection()
+        src_conn.backup(dst_conn, pages=-1)
+        src_conn.close()
+        dst_conn.close()
+        tmp.unlink(missing_ok=True)
         initialize_database()
     except Exception as exc:
+        log.exception("Upload restore failed")
         return jsonify({"error": f"Failed to restore database: {exc}"}), 500
 
     return jsonify({"success": True, "message": "Database restored successfully."})
