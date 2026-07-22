@@ -1,4 +1,3 @@
-import atexit
 import functools
 import json
 import hashlib
@@ -6,58 +5,11 @@ import logging
 import os
 import secrets
 import sqlite3
-import tempfile
 from pathlib import Path
 from typing import Optional
 
 logging.basicConfig(level=logging.DEBUG)
 log = logging.getLogger(__name__)
-
-_WEB_LOCK_FILE = os.path.join(tempfile.gettempdir(), "geetapariwar_web.lock")
-
-
-def _acquire_web_lock() -> bool:
-    try:
-        fd = os.open(_WEB_LOCK_FILE, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-        os.write(fd, str(os.getpid()).encode())
-        os.close(fd)
-        return True
-    except FileExistsError:
-        try:
-            with open(_WEB_LOCK_FILE) as f:
-                old_pid = int(f.read().strip())
-            try:
-                os.kill(old_pid, 0)
-                return False
-            except OSError:
-                pass
-            os.unlink(_WEB_LOCK_FILE)
-            fd = os.open(_WEB_LOCK_FILE, os.O_CREAT | os.O_EXCL | os.O_WRONLY)
-            os.write(fd, str(os.getpid()).encode())
-            os.close(fd)
-            return True
-        except Exception:
-            return False
-
-
-if not _acquire_web_lock():
-    log.error("Another web server instance is already running")
-    import sys
-    sys.exit(1)
-
-
-def _cleanup_web_lock() -> None:
-    try:
-        if os.path.exists(_WEB_LOCK_FILE):
-            with open(_WEB_LOCK_FILE) as f:
-                pid = int(f.read().strip())
-            if pid == os.getpid():
-                os.unlink(_WEB_LOCK_FILE)
-    except Exception:
-        pass
-
-
-atexit.register(_cleanup_web_lock)
 
 from flask import (
     Flask, render_template, request, redirect,
