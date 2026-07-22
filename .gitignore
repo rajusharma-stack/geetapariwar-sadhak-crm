@@ -19,3 +19,5 @@ run.bat
 data/
 backups/
 exports/
+.secret_key
+.railway-config-pull-*/
