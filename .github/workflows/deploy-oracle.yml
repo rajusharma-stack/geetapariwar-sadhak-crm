@@ -1,0 +1,61 @@
+name: Deploy to Oracle Cloud
+
+on:
+  push:
+    branches: [master, main]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Deploy to Oracle VM via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.ORACLE_HOST }}
+          username: ${{ secrets.ORACLE_USER }}
+          key: ${{ secrets.ORACLE_SSH_KEY }}
+          port: 22
+          script: |
+            set -e
+            cd /home/ubuntu/Geetapariwarsadhak || {
+              git clone https://github.com/rajusharma-stack/geetapariwar-sadhak-crm.git /home/ubuntu/Geetapariwarsadhak
+              cd /home/ubuntu/Geetapariwarsadhak
+            }
+            git stash || true
+            git pull origin master || git pull origin main
+            mkdir -p data backups exports
+            if [ ! -d ".venv" ]; then
+              python3 -m venv .venv
+            fi
+            source .venv/bin/activate
+            pip install -q -r requirements.txt
+            if [ ! -f .secret_key ]; then
+              python3 -c "import secrets; print(secrets.token_hex(32))" > .secret_key
+            fi
+            sudo systemctl restart geetapariwar || {
+              sudo tee /etc/systemd/system/geetapariwar.service > /dev/null << SERVICEOF
+[Unit]
+Description=Geeta Pariwar CRM
+After=network.target
+
+[Service]
+User=ubuntu
+WorkingDirectory=/home/ubuntu/Geetapariwarsadhak
+Environment="GEETAPARIWAR_DATA_DIR=/home/ubuntu/Geetapariwarsadhak/data"
+Environment="SECRET_KEY=$(cat .secret_key)"
+ExecStart=/home/ubuntu/Geetapariwarsadhak/.venv/bin/gunicorn -w 1 -b 0.0.0.0:3201 --access-logfile - --error-logfile - wsgi:application
+Restart=always
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target
+SERVICEOF
+              sudo systemctl daemon-reload
+              sudo systemctl enable geetapariwar
+              sudo systemctl start geetapariwar
+            }
+            echo "Deploy complete"
