@@ -39,3 +39,25 @@ This starts ngrok + waitress (production WSGI). It prints a public URL you can s
 ```powershell
 .venv\Scripts\python.exe main.py
 ```
+
+## Oracle Cloud Free Tier Deployment
+### Files
+- `deploy_oracle.sh` — run this on the VM for first-time setup
+- `.github/workflows/deploy-oracle.yml` — GitHub Actions auto-deploy on push
+
+### One-time setup on Oracle VM
+```bash
+wget -O - https://raw.githubusercontent.com/rajusharma-stack/geetapariwar-sadhak-crm/master/deploy_oracle.sh | bash
+```
+
+### GitHub Secrets needed (for auto-deploy)
+Set these in repo → Settings → Secrets and variables → Actions:
+- `ORACLE_HOST` — VM public IP
+- `ORACLE_USER` — `ubuntu`
+- `ORACLE_SSH_KEY` — private SSH key (PEM format)
+
+### Important: copy existing database
+```bash
+# From local machine after SSH setup:
+scp data/crm.db ubuntu@<VM-IP>:/home/ubuntu/Geetapariwarsadhak/data/
+```
